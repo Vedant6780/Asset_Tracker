@@ -42,72 +42,56 @@ A **real-time backend API** coupled with a **modern React frontend** that:
 
 | Technology | Version | Why We Chose It |
 |-----------|---------|-----------------|
-| **FastAPI** | 0.115+ | The fastest Python web framework. Built-in async support, automatic OpenAPI/Swagger documentation, native WebSocket support, and Pydantic integration for data validation. Perfect for real-time APIs. |
-| **SQLAlchemy** | 2.0+ | The industry-standard Python ORM. Prevents SQL injection, provides type-safe database queries, and supports async operations via `AsyncSession`. We use the 2.0-style with `select()` statements. |
-| **aiosqlite** | 0.20 | Async SQLite driver. SQLite requires zero infrastructure setup (no database server), making the project instantly runnable. For production, swap to `asyncpg` + PostgreSQL with a single config change. |
-| **python-jose** | 3.3 | JSON Web Token (JWT) library supporting RSA and HMAC algorithms. We use it to create and verify signed tokens that encode the user's identity and role. |
-| **passlib + bcrypt** | 1.7 | Industry-standard password hashing. Bcrypt is a slow-by-design algorithm that makes brute-force attacks computationally expensive. Passwords are never stored in plaintext. |
-| **Uvicorn** | 0.30+ | ASGI server that runs FastAPI. Supports HTTP/2, WebSockets, and hot-reload during development. |
+| **Django** | 5.1.2 | Robust, battle-tested Python web framework. Provides built-in ORM, admin capabilities, user management, and security primitives. |
+| **Django REST Framework** | 3.15.2 | The industry standard for building Web APIs in Django. Provides ViewSets, serializers, status codes, and declarative URL routing. |
+| **SimpleJWT** | 5.3.1 | JSON Web Token authentication plugin for DRF. Provides secure token generation, validation, and role-based payload claims. |
+| **Django Channels & Daphne** | 4.1.x | Async WebSocket capabilities integrated with Django's event loop for real-time dashboard updates. |
+| **SQLite** | 3.x | Zero-config relational database engine. Easily replaceable with PostgreSQL/MySQL in production. |
 
 ### Frontend
 
 | Technology | Version | Why We Chose It |
 |-----------|---------|-----------------|
-| **React** | 19.x | Component-based architecture for building complex UIs. Virtual DOM for efficient re-renders — critical when real-time WebSocket events update the dashboard. |
+| **React** | 19.x | Component-based architecture for building complex UIs. Virtual DOM for efficient re-renders — critical when real-time events update the dashboard. |
 | **Vite** | 7.x | Next-generation build tool. Sub-second hot module replacement (HMR) during development. Much faster than Create React App or Webpack. |
 | **React Router** | 7.x | Client-side routing for SPA navigation. Handles protected routes (redirecting unauthenticated users) and role-based route access. |
 | **Vanilla CSS** | — | Full design control. We built a custom design system with CSS custom properties (variables), glassmorphism effects, gradient animations, and micro-interactions. No dependency on utility frameworks. |
-
-### Why NOT These Alternatives?
-
-| Alternative | Why We Didn't Use It |
-|------------|---------------------|
-| Django | Too heavyweight for a real-time API. Django's ORM is synchronous by default, making WebSockets harder. |
-| Express.js | We wanted Python's ecosystem for data-heavy operations and Pydantic's validation. |
-| PostgreSQL | SQLite is zero-config for demos. The codebase is designed to swap databases with a single config change. |
-| TailwindCSS | Custom CSS gives us pixel-perfect control over glassmorphism and animations without adding build deps. |
 
 ---
 
 ## 3. Project Structure
 
 ```
-d:\workflow API\
-├── backend\                       # Python FastAPI backend
-│   ├── main.py                    # App entry point, CORS, lifespan events
-│   ├── config.py                  # JWT secret, DB URL, status constants
-│   ├── database.py                # Async SQLAlchemy engine & session factory
-│   ├── models.py                  # ORM models: User, Asset, AuditLog
-│   ├── schemas.py                 # Pydantic validation schemas
-│   ├── auth.py                    # JWT + bcrypt + RBAC dependencies
-│   ├── websocket_manager.py       # WebSocket connection tracker & broadcaster
-│   ├── seed.py                    # Demo data seeder (runs on first startup)
-│   ├── requirements.txt           # Python dependencies
-│   └── routers\
-│       ├── auth_router.py         # POST /api/v1/auth/login
-│       ├── asset_router.py        # Full CRUD + status update + WebSocket trigger
-│       └── ws_router.py           # WS /api/v1/ws/dashboard
-├── frontend\                      # React (Vite) frontend
-│   ├── src\
-│   │   ├── main.jsx               # React DOM render
-│   │   ├── App.jsx                # Router + AuthProvider
-│   │   ├── index.css              # Global design system
-│   │   ├── api.js                 # Fetch wrapper + WebSocket factory
-│   │   ├── context\
-│   │   │   └── AuthContext.jsx    # Auth state management
-│   │   ├── pages\
+workflow API/
+├── backend/                       # Django REST Framework backend
+│   ├── api/                       # Core application app
+│   │   ├── models.py              # CustomUser, Asset, AuditLog ORM models
+│   │   ├── views.py               # AssetViewSet, CustomTokenObtainPairView
+│   │   ├── serializers.py         # DRF Serializers with audit trail support
+│   │   ├── urls.py                # App URL routing
+│   │   └── management/commands/   # Custom management commands (seed_db)
+│   ├── core/                      # Project configuration (settings, urls, asgi, wsgi)
+│   ├── manage.py                  # Django CLI runner
+│   └── requirements.txt           # Python dependencies
+├── frontend/                      # React (Vite) frontend
+│   ├── src/
+│   │   ├── main.jsx               # React DOM entry point
+│   │   ├── App.jsx                # Router & AuthProvider setup
+│   │   ├── index.css              # Glassmorphic CSS design system
+│   │   ├── api.js                 # Centralized fetch wrapper & WS factory
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx    # Global Authentication context
+│   │   ├── pages/
 │   │   │   ├── LoginPage.jsx      # Glassmorphic login
-│   │   │   ├── OperatorDashboard.jsx  # Scanner UI
-│   │   │   └── ManagerDashboard.jsx   # Live operations center
-│   │   └── components\
-│   │       ├── AssetTable.jsx     # Data table with flash animations
-│   │       ├── AuditPanel.jsx     # Side-panel timeline
-│   │       ├── StatusBadge.jsx    # Color-coded status indicator
-│   │       └── LiveIndicator.jsx  # WebSocket connection status
-│   ├── index.html
+│   │   │   ├── OperatorDashboard.jsx  # Operator scanner interface
+│   │   │   └── ManagerDashboard.jsx   # Live operational dashboard
+│   │   └── components/
+│   │       ├── AssetTable.jsx     # Asset listing table
+│   │       ├── AuditPanel.jsx     # Side audit panel
+│   │       └── StatusBadge.jsx    # Status indicators
 │   ├── package.json
 │   └── vite.config.js
-└── PROJECT_DOCUMENTATION.md       # This file
+└── PROJECT_DOCUMENTATION.md       # Full documentation
 ```
 
 ---
