@@ -2,7 +2,7 @@
  * Centralized API helpers — fetch wrapper and WebSocket factory.
  */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'http://127.0.0.1:8000';
 
 /**
  * Make an authenticated fetch request.
@@ -36,7 +36,7 @@ export async function authFetch(endpoint, options = {}) {
  */
 export function createDashboardSocket(onMessage, onOpen, onClose) {
     const token = localStorage.getItem('token');
-    const ws = new WebSocket(`ws://localhost:8000/api/v1/ws/dashboard?token=${token}`);
+    const ws = new WebSocket(`ws://127.0.0.1:8000/api/v1/ws/dashboard?token=${token}`);
 
     ws.onopen = () => {
         console.log('🟢 WebSocket connected');
